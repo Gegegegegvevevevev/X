@@ -1,0 +1,1202 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sistem Pembayaran - Dana, GoPay, QRIS</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.2.3/dist/css/bootstrap.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.2.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <style>
+        :root {
+            --primary-color: #4361ee;
+            --secondary-color: #3a0ca3;
+            --success-color: #4cc9f0;
+            --danger-color: #f72585;
+            --light-color: #f8f9fa;
+            --dark-color: #212529;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #f5f7fb;
+            color: var(--dark-color);
+            min-height: 100vh;
+        }
+        
+        .navbar-brand {
+            font-weight: 700;
+            color: var(--primary-color) !important;
+        }
+        
+        .payment-card {
+            border-radius: 15px;
+            border: none;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.08);
+            transition: transform 0.3s ease;
+            margin-bottom: 20px;
+        }
+        
+        .payment-card:hover {
+            transform: translateY(-5px);
+        }
+        
+        .payment-method {
+            cursor: pointer;
+            border: 2px solid #e9ecef;
+            border-radius: 10px;
+            padding: 15px;
+            margin-bottom: 15px;
+            transition: all 0.3s ease;
+        }
+        
+        .payment-method:hover {
+            border-color: var(--primary-color);
+            background-color: rgba(67, 97, 238, 0.05);
+        }
+        
+        .payment-method.selected {
+            border-color: var(--primary-color);
+            background-color: rgba(67, 97, 238, 0.1);
+        }
+        
+        .payment-icon {
+            font-size: 2rem;
+            margin-right: 15px;
+            color: var(--primary-color);
+        }
+        
+        .qris-container {
+            text-align: center;
+            padding: 20px;
+            background-color: white;
+            border-radius: 10px;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.05);
+        }
+        
+        .qris-code {
+            width: 200px;
+            height: 200px;
+            background-color: #f8f9fa;
+            border: 1px dashed #dee2e6;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 20px;
+            font-size: 3rem;
+            color: #6c757d;
+        }
+        
+        .admin-table {
+            background-color: white;
+            border-radius: 10px;
+            overflow: hidden;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.05);
+        }
+        
+        .status-badge {
+            padding: 5px 12px;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            font-weight: 600;
+        }
+        
+        .status-pending {
+            background-color: #fff3cd;
+            color: #856404;
+        }
+        
+        .status-success {
+            background-color: #d4edda;
+            color: #155724;
+        }
+        
+        .status-failed {
+            background-color: #f8d7da;
+            color: #721c24;
+        }
+        
+        .login-container {
+            max-width: 400px;
+            margin: 100px auto;
+            background-color: white;
+            border-radius: 15px;
+            padding: 30px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+        }
+        
+        .section-title {
+            color: var(--primary-color);
+            border-bottom: 2px solid var(--primary-color);
+            padding-bottom: 10px;
+            margin-bottom: 25px;
+        }
+        
+        .hidden {
+            display: none;
+        }
+        
+        .btn-primary {
+            background-color: var(--primary-color);
+            border-color: var(--primary-color);
+        }
+        
+        .btn-primary:hover {
+            background-color: var(--secondary-color);
+            border-color: var(--secondary-color);
+        }
+        
+        .receipt {
+            background-color: white;
+            border-radius: 10px;
+            padding: 25px;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.05);
+            max-width: 500px;
+            margin: 0 auto;
+        }
+        
+        @media (max-width: 768px) {
+            .login-container {
+                margin: 50px auto;
+                padding: 20px;
+            }
+            
+            .qris-code {
+                width: 150px;
+                height: 150px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Login Form (Tampilan Awal) -->
+    <div id="loginSection" class="container">
+        <div class="login-container">
+            <div class="text-center mb-4">
+                <h2 class="fw-bold">Sistem Pembayaran</h2>
+                <p class="text-muted">Login ke sistem pembayaran</p>
+            </div>
+            
+            <div class="mb-3">
+                <label for="loginRole" class="form-label">Login sebagai:</label>
+                <select class="form-select" id="loginRole">
+                    <option value="user">User / Pembeli</option>
+                    <option value="admin">Admin</option>
+                </select>
+            </div>
+            
+            <div class="mb-3">
+                <label for="username" class="form-label">Username</label>
+                <input type="text" class="form-control" id="username" placeholder="Masukkan username" value="user123">
+            </div>
+            
+            <div class="mb-3">
+                <label for="password" class="form-label">Password</label>
+                <input type="password" class="form-control" id="password" placeholder="Masukkan password" value="password123">
+            </div>
+            
+            <button class="btn btn-primary w-100" onclick="login()">Masuk</button>
+            
+            <div class="mt-3 text-center text-muted">
+                <small>Gunakan username: <strong>user123</strong> / password: <strong>password123</strong> untuk user</small><br>
+                <small>Gunakan username: <strong>admin</strong> / password: <strong>admin123</strong> untuk admin</small>
+            </div>
+        </div>
+    </div>
+
+    <!-- User Dashboard (Tampilan User) -->
+    <div id="userDashboard" class="hidden">
+        <!-- Navbar -->
+        <nav class="navbar navbar-expand-lg navbar-light bg-white shadow-sm">
+            <div class="container">
+                <a class="navbar-brand" href="#">
+                    <i class="fas fa-wallet me-2"></i>PaymentSystem
+                </a>
+                <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                    <span class="navbar-toggler-icon"></span>
+                </button>
+                <div class="collapse navbar-collapse" id="navbarNav">
+                    <ul class="navbar-nav ms-auto">
+                        <li class="nav-item">
+                            <a class="nav-link active" href="#" onclick="showUserDashboard()">
+                                <i class="fas fa-home me-1"></i> Beranda
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="#" onclick="showTransactionHistory()">
+                                <i class="fas fa-history me-1"></i> Riwayat
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link text-danger" href="#" onclick="logout()">
+                                <i class="fas fa-sign-out-alt me-1"></i> Logout
+                            </a>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+        </nav>
+
+        <!-- Main Content -->
+        <div class="container mt-4">
+            <!-- Halaman Beranda User -->
+            <div id="userHome">
+                <div class="row">
+                    <div class="col-lg-8 mx-auto">
+                        <div class="card payment-card">
+                            <div class="card-body">
+                                <h4 class="card-title section-title">Pembayaran</h4>
+                                
+                                <div class="mb-4">
+                                    <label for="amount" class="form-label fw-bold">Jumlah Pembayaran</label>
+                                    <div class="input-group">
+                                        <span class="input-group-text">Rp</span>
+                                        <input type="number" class="form-control form-control-lg" id="amount" placeholder="Masukkan jumlah" value="50000" min="1000" step="1000">
+                                    </div>
+                                    <div class="form-text">Minimal pembayaran: Rp 1.000</div>
+                                </div>
+                                
+                                <div class="mb-4">
+                                    <h5 class="fw-bold mb-3">Pilih Metode Pembayaran</h5>
+                                    
+                                    <!-- Dana -->
+                                    <div class="payment-method" onclick="selectPaymentMethod('dana')" id="danaMethod">
+                                        <div class="d-flex align-items-center">
+                                            <div class="payment-icon">
+                                                <i class="fas fa-mobile-alt"></i>
+                                            </div>
+                                            <div>
+                                                <h6 class="fw-bold mb-1">Dana</h6>
+                                                <p class="mb-0 text-muted">Bayar melalui aplikasi Dana</p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    
+                                    <!-- GoPay -->
+                                    <div class="payment-method" onclick="selectPaymentMethod('gopay')" id="gopayMethod">
+                                        <div class="d-flex align-items-center">
+                                            <div class="payment-icon">
+                                                <i class="fas fa-wallet"></i>
+                                            </div>
+                                            <div>
+                                                <h6 class="fw-bold mb-1">GoPay</h6>
+                                                <p class="mb-0 text-muted">Bayar melalui GoPay</p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    
+                                    <!-- QRIS -->
+                                    <div class="payment-method" onclick="selectPaymentMethod('qris')" id="qrisMethod">
+                                        <div class="d-flex align-items-center">
+                                            <div class="payment-icon">
+                                                <i class="fas fa-qrcode"></i>
+                                            </div>
+                                            <div>
+                                                <h6 class="fw-bold mb-1">QRIS</h6>
+                                                <p class="mb-0 text-muted">Scan kode QR untuk pembayaran</p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <div class="d-grid gap-2">
+                                    <button class="btn btn-primary btn-lg" onclick="processPayment()">
+                                        <i class="fas fa-credit-card me-2"></i> Bayar Sekarang
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Halaman Riwayat Transaksi User -->
+            <div id="userHistory" class="hidden">
+                <div class="row">
+                    <div class="col-lg-10 mx-auto">
+                        <div class="d-flex justify-content-between align-items-center mb-4">
+                            <h4 class="section-title">Riwayat Transaksi</h4>
+                            <button class="btn btn-outline-primary" onclick="showUserDashboard()">
+                                <i class="fas fa-arrow-left me-1"></i> Kembali
+                            </button>
+                        </div>
+                        
+                        <div class="admin-table">
+                            <div class="table-responsive">
+                                <table class="table table-hover mb-0">
+                                    <thead class="table-light">
+                                        <tr>
+                                            <th>ID Transaksi</th>
+                                            <th>Tanggal</th>
+                                            <th>Metode</th>
+                                            <th>Jumlah</th>
+                                            <th>Status</th>
+                                            <th>Aksi</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="userTransactionTable">
+                                        <!-- Data akan diisi oleh JavaScript -->
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Admin Dashboard (Tampilan Admin) -->
+    <div id="adminDashboard" class="hidden">
+        <!-- Navbar -->
+        <nav class="navbar navbar-expand-lg navbar-dark" style="background-color: var(--secondary-color);">
+            <div class="container">
+                <a class="navbar-brand" href="#">
+                    <i class="fas fa-user-shield me-2"></i>Admin Panel
+                </a>
+                <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#adminNavbar">
+                    <span class="navbar-toggler-icon"></span>
+                </button>
+                <div class="collapse navbar-collapse" id="adminNavbar">
+                    <ul class="navbar-nav ms-auto">
+                        <li class="nav-item">
+                            <a class="nav-link active" href="#" onclick="showAdminDashboard()">
+                                <i class="fas fa-tachometer-alt me-1"></i> Dashboard
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="#" onclick="showVerificationSection()">
+                                <i class="fas fa-check-circle me-1"></i> Verifikasi
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link text-warning" href="#" onclick="logout()">
+                                <i class="fas fa-sign-out-alt me-1"></i> Logout
+                            </a>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+        </nav>
+
+        <div class="container mt-4">
+            <!-- Dashboard Admin -->
+            <div id="adminHome">
+                <h4 class="section-title">Dashboard Admin</h4>
+                
+                <div class="row mb-4">
+                    <div class="col-md-4">
+                        <div class="card payment-card bg-primary text-white">
+                            <div class="card-body">
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <div>
+                                        <h6 class="card-subtitle mb-2">Total Transaksi</h6>
+                                        <h3 class="card-title" id="totalTransactions">0</h3>
+                                    </div>
+                                    <i class="fas fa-exchange-alt fa-3x opacity-50"></i>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="col-md-4">
+                        <div class="card payment-card bg-success text-white">
+                            <div class="card-body">
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <div>
+                                        <h6 class="card-subtitle mb-2">Sukses</h6>
+                                        <h3 class="card-title" id="successTransactions">0</h3>
+                                    </div>
+                                    <i class="fas fa-check-circle fa-3x opacity-50"></i>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="col-md-4">
+                        <div class="card payment-card bg-danger text-white">
+                            <div class="card-body">
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <div>
+                                        <h6 class="card-subtitle mb-2">Pending</h6>
+                                        <h3 class="card-title" id="pendingTransactions">0</h3>
+                                    </div>
+                                    <i class="fas fa-clock fa-3x opacity-50"></i>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="row">
+                    <div class="col-lg-12">
+                        <div class="d-flex justify-content-between align-items-center mb-4">
+                            <h5 class="section-title">Semua Transaksi</h5>
+                            <button class="btn btn-primary" onclick="loadTransactions()">
+                                <i class="fas fa-sync-alt me-1"></i> Refresh
+                            </button>
+                        </div>
+                        
+                        <div class="admin-table">
+                            <div class="table-responsive">
+                                <table class="table table-hover mb-0">
+                                    <thead class="table-light">
+                                        <tr>
+                                            <th>ID Transaksi</th>
+                                            <th>User</th>
+                                            <th>Tanggal</th>
+                                            <th>Metode</th>
+                                            <th>Jumlah</th>
+                                            <th>Status</th>
+                                            <th>Bukti TF</th>
+                                            <th>Aksi</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="adminTransactionTable">
+                                        <!-- Data akan diisi oleh JavaScript -->
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Halaman Verifikasi Admin -->
+            <div id="adminVerification" class="hidden">
+                <div class="d-flex justify-content-between align-items-center mb-4">
+                    <h4 class="section-title">Verifikasi Pembayaran</h4>
+                    <button class="btn btn-outline-primary" onclick="showAdminDashboard()">
+                        <i class="fas fa-arrow-left me-1"></i> Kembali ke Dashboard
+                    </button>
+                </div>
+                
+                <div class="row">
+                    <div class="col-lg-8 mx-auto">
+                        <div class="card payment-card">
+                            <div class="card-body">
+                                <div id="verificationContent">
+                                    <p class="text-center">Pilih transaksi dari tabel untuk verifikasi pembayaran</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal untuk Detail Transaksi -->
+    <div class="modal fade" id="transactionModal" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Detail Transaksi</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body" id="transactionModalBody">
+                    <!-- Konten akan diisi oleh JavaScript -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal untuk Upload Bukti TF -->
+    <div class="modal fade" id="uploadProofModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Upload Bukti Transfer</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <p>Silakan upload bukti transfer untuk transaksi: <strong id="proofTransactionId"></strong></p>
+                    <div class="mb-3">
+                        <label for="proofImage" class="form-label">Pilih gambar bukti transfer</label>
+                        <input class="form-control" type="file" id="proofImage" accept="image/*">
+                    </div>
+                    <div id="proofPreview" class="mb-3 text-center"></div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Batal</button>
+                    <button type="button" class="btn btn-primary" onclick="uploadProof()">Upload Bukti</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Data in-memory untuk simulasi database
+        let transactions = JSON.parse(localStorage.getItem('paymentTransactions')) || [];
+        let currentUser = null;
+        let selectedPaymentMethod = null;
+        let currentTransactionId = null;
+        
+        // Inisialisasi data contoh jika kosong
+        function initializeSampleData() {
+            if (transactions.length === 0) {
+                const sampleTransactions = [
+                    {
+                        id: 'TRX001',
+                        userId: 'user123',
+                        userName: 'John Doe',
+                        date: '2023-10-15 14:30',
+                        method: 'Dana',
+                        amount: 75000,
+                        status: 'success',
+                        proof: 'bukti_dana_001.jpg'
+                    },
+                    {
+                        id: 'TRX002',
+                        userId: 'user123',
+                        userName: 'John Doe',
+                        date: '2023-10-16 09:15',
+                        method: 'GoPay',
+                        amount: 120000,
+                        status: 'pending',
+                        proof: ''
+                    },
+                    {
+                        id: 'TRX003',
+                        userId: 'user456',
+                        userName: 'Jane Smith',
+                        date: '2023-10-17 16:45',
+                        method: 'QRIS',
+                        amount: 50000,
+                        status: 'success',
+                        proof: 'bukti_qris_001.jpg'
+                    },
+                    {
+                        id: 'TRX004',
+                        userId: 'user789',
+                        userName: 'Robert Johnson',
+                        date: '2023-10-18 11:20',
+                        method: 'Dana',
+                        amount: 250000,
+                        status: 'failed',
+                        proof: ''
+                    }
+                ];
+                
+                transactions = sampleTransactions;
+                localStorage.setItem('paymentTransactions', JSON.stringify(transactions));
+            }
+        }
+        
+        // Login function
+        function login() {
+            const role = document.getElementById('loginRole').value;
+            const username = document.getElementById('username').value;
+            const password = document.getElementById('password').value;
+            
+            // Validasi sederhana
+            if (role === 'user') {
+                if (username === 'user123' && password === 'password123') {
+                    currentUser = {
+                        username: 'user123',
+                        name: 'John Doe',
+                        role: 'user'
+                    };
+                    showUserDashboard();
+                    initializeSampleData();
+                    loadUserTransactions();
+                } else {
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Login Gagal',
+                        text: 'Username atau password user salah!'
+                    });
+                }
+            } else if (role === 'admin') {
+                if (username === 'admin' && password === 'admin123') {
+                    currentUser = {
+                        username: 'admin',
+                        name: 'Administrator',
+                        role: 'admin'
+                    };
+                    showAdminDashboard();
+                    initializeSampleData();
+                    loadTransactions();
+                    updateDashboardStats();
+                } else {
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Login Gagal',
+                        text: 'Username atau password admin salah!'
+                    });
+                }
+            }
+        }
+        
+        // Logout function
+        function logout() {
+            currentUser = null;
+            document.getElementById('loginSection').classList.remove('hidden');
+            document.getElementById('userDashboard').classList.add('hidden');
+            document.getElementById('adminDashboard').classList.add('hidden');
+            
+            // Reset form login
+            document.getElementById('username').value = '';
+            document.getElementById('password').value = '';
+        }
+        
+        // Tampilkan dashboard user
+        function showUserDashboard() {
+            document.getElementById('userHome').classList.remove('hidden');
+            document.getElementById('userHistory').classList.add('hidden');
+        }
+        
+        // Tampilkan riwayat transaksi user
+        function showTransactionHistory() {
+            document.getElementById('userHome').classList.add('hidden');
+            document.getElementById('userHistory').classList.remove('hidden');
+            loadUserTransactions();
+        }
+        
+        // Tampilkan dashboard admin
+        function showAdminDashboard() {
+            document.getElementById('adminHome').classList.remove('hidden');
+            document.getElementById('adminVerification').classList.add('hidden');
+            loadTransactions();
+            updateDashboardStats();
+        }
+        
+        // Tampilkan halaman verifikasi admin
+        function showVerificationSection() {
+            document.getElementById('adminHome').classList.add('hidden');
+            document.getElementById('adminVerification').classList.remove('hidden');
+        }
+        
+        // Pilih metode pembayaran
+        function selectPaymentMethod(method) {
+            selectedPaymentMethod = method;
+            
+            // Reset semua pilihan
+            document.querySelectorAll('.payment-method').forEach(el => {
+                el.classList.remove('selected');
+            });
+            
+            // Tandai yang dipilih
+            document.getElementById(`${method}Method`).classList.add('selected');
+        }
+        
+        // Proses pembayaran
+        function processPayment() {
+            const amount = document.getElementById('amount').value;
+            
+            if (!amount || amount < 1000) {
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Jumlah Invalid',
+                    text: 'Masukkan jumlah pembayaran minimal Rp 1.000'
+                });
+                return;
+            }
+            
+            if (!selectedPaymentMethod) {
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Metode Pembayaran',
+                    text: 'Pilih metode pembayaran terlebih dahulu'
+                });
+                return;
+            }
+            
+            // Generate ID transaksi
+            const transactionId = 'TRX' + Date.now().toString().substr(-6);
+            currentTransactionId = transactionId;
+            
+            // Simpan transaksi baru
+            const newTransaction = {
+                id: transactionId,
+                userId: currentUser.username,
+                userName: currentUser.name,
+                date: new Date().toLocaleString('id-ID'),
+                method: getPaymentMethodName(selectedPaymentMethod),
+                amount: parseInt(amount),
+                status: 'pending',
+                proof: ''
+            };
+            
+            transactions.push(newTransaction);
+            localStorage.setItem('paymentTransactions', JSON.stringify(transactions));
+            
+            // Tampilkan instruksi pembayaran berdasarkan metode
+            showPaymentInstructions(selectedPaymentMethod, transactionId, amount);
+        }
+        
+        // Dapatkan nama metode pembayaran
+        function getPaymentMethodName(method) {
+            switch(method) {
+                case 'dana': return 'Dana';
+                case 'gopay': return 'GoPay';
+                case 'qris': return 'QRIS';
+                default: return 'Unknown';
+            }
+        }
+        
+        // Tampilkan instruksi pembayaran
+        function showPaymentInstructions(method, transactionId, amount) {
+            let title, html;
+            const formattedAmount = new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR' }).format(amount);
+            
+            switch(method) {
+                case 'dana':
+                    title = 'Instruksi Pembayaran Dana';
+                    html = `
+                        <div class="text-center">
+                            <div class="mb-4">
+                                <i class="fas fa-mobile-alt fa-4x text-primary mb-3"></i>
+                                <h5>Lakukan Pembayaran via Dana</h5>
+                            </div>
+                            <div class="receipt mb-4">
+                                <h6 class="fw-bold">Detail Transaksi</h6>
+                                <p>ID: <strong>${transactionId}</strong></p>
+                                <p>Jumlah: <strong>${formattedAmount}</strong></p>
+                                <hr>
+                                <p class="fw-bold">Instruksi:</p>
+                                <ol class="text-start">
+                                    <li>Buka aplikasi Dana</li>
+                                    <li>Pilih "Kirim" atau "Bayar"</li>
+                                    <li>Masukkan nomor: <strong>081234567890</strong></li>
+                                    <li>Masukkan jumlah: <strong>${formattedAmount}</strong></li>
+                                    <li>Tambahkan catatan: <strong>${transactionId}</strong></li>
+                                    <li>Konfirmasi pembayaran</li>
+                                </ol>
+                            </div>
+                            <p>Setelah melakukan pembayaran, upload bukti transfer untuk verifikasi.</p>
+                        </div>
+                    `;
+                    break;
+                    
+                case 'gopay':
+                    title = 'Instruksi Pembayaran GoPay';
+                    html = `
+                        <div class="text-center">
+                            <div class="mb-4">
+                                <i class="fas fa-wallet fa-4x text-success mb-3"></i>
+                                <h5>Lakukan Pembayaran via GoPay</h5>
+                            </div>
+                            <div class="receipt mb-4">
+                                <h6 class="fw-bold">Detail Transaksi</h6>
+                                <p>ID: <strong>${transactionId}</strong></p>
+                                <p>Jumlah: <strong>${formattedAmount}</strong></p>
+                                <hr>
+                                <p class="fw-bold">Instruksi:</p>
+                                <ol class="text-start">
+                                    <li>Buka aplikasi Gojek</li>
+                                    <li>Pilih "GoPay"</li>
+                                    <li>Pilih "Bayar"</li>
+                                    <li>Scan kode QR berikut atau masukkan kode:</li>
+                                    <div class="text-center my-3">
+                                        <div class="qris-code mx-auto">
+                                            <i class="fas fa-qrcode"></i>
+                                        </div>
+                                        <p class="fw-bold">GP${transactionId}</p>
+                                    </div>
+                                    <li>Masukkan jumlah: <strong>${formattedAmount}</strong></li>
+                                    <li>Konfirmasi pembayaran</li>
+                                </ol>
+                            </div>
+                            <p>Setelah melakukan pembayaran, upload bukti transfer untuk verifikasi.</p>
+                        </div>
+                    `;
+                    break;
+                    
+                case 'qris':
+                    title = 'Instruksi Pembayaran QRIS';
+                    html = `
+                        <div class="text-center">
+                            <div class="mb-4">
+                                <i class="fas fa-qrcode fa-4x text-secondary mb-3"></i>
+                                <h5>Lakukan Pembayaran via QRIS</h5>
+                            </div>
+                            <div class="receipt mb-4">
+                                <h6 class="fw-bold">Detail Transaksi</h6>
+                                <p>ID: <strong>${transactionId}</strong></p>
+                                <p>Jumlah: <strong>${formattedAmount}</strong></p>
+                                <hr>
+                                <div class="qris-container my-4">
+                                    <p>Scan kode QR berikut dengan aplikasi e-wallet atau mobile banking:</p>
+                                    <div class="qris-code mx-auto mb-3">
+                                        <i class="fas fa-qrcode"></i>
+                                    </div>
+                                    <p class="fw-bold">ID Transaksi: ${transactionId}</p>
+                                </div>
+                                <p class="fw-bold">Instruksi:</p>
+                                <ol class="text-start">
+                                    <li>Buka aplikasi e-wallet atau mobile banking yang mendukung QRIS</li>
+                                    <li>Pilih fitur scan QRIS</li>
+                                    <li>Scan kode QR di atas</li>
+                                    <li>Pastikan jumlah pembayaran: <strong>${formattedAmount}</strong></li>
+                                    <li>Konfirmasi pembayaran</li>
+                                </ol>
+                            </div>
+                            <p>Setelah melakukan pembayaran, upload bukti transfer untuk verifikasi.</p>
+                        </div>
+                    `;
+                    break;
+            }
+            
+            // Tampilkan modal dengan instruksi
+            Swal.fire({
+                title: title,
+                html: html,
+                icon: 'info',
+                showCancelButton: true,
+                confirmButtonText: 'Upload Bukti TF',
+                cancelButtonText: 'Nanti'
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    // Tampilkan modal upload bukti
+                    document.getElementById('proofTransactionId').textContent = transactionId;
+                    const modal = new bootstrap.Modal(document.getElementById('uploadProofModal'));
+                    modal.show();
+                }
+            });
+        }
+        
+        // Upload bukti transfer
+        function uploadProof() {
+            const fileInput = document.getElementById('proofImage');
+            const proofPreview = document.getElementById('proofPreview');
+            
+            if (!fileInput.files || fileInput.files.length === 0) {
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Peringatan',
+                    text: 'Pilih file bukti transfer terlebih dahulu'
+                });
+                return;
+            }
+            
+            const file = fileInput.files[0];
+            const fileName = `bukti_${currentTransactionId}_${Date.now()}.jpg`;
+            
+            // Simulasikan upload file
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                // Tampilkan preview
+                proofPreview.innerHTML = `<img src="${e.target.result}" class="img-thumbnail" style="max-height: 200px;">`;
+                
+                // Update transaksi dengan bukti
+                const transactionIndex = transactions.findIndex(t => t.id === currentTransactionId);
+                if (transactionIndex !== -1) {
+                    transactions[transactionIndex].proof = fileName;
+                    localStorage.setItem('paymentTransactions', JSON.stringify(transactions));
+                    
+                    Swal.fire({
+                        icon: 'success',
+                        title: 'Berhasil!',
+                        text: 'Bukti transfer berhasil diupload. Menunggu verifikasi admin.'
+                    });
+                    
+                    // Tutup modal
+                    const modal = bootstrap.Modal.getInstance(document.getElementById('uploadProofModal'));
+                    modal.hide();
+                    
+                    // Reset form
+                    fileInput.value = '';
+                    proofPreview.innerHTML = '';
+                }
+            };
+            reader.readAsDataURL(file);
+        }
+        
+        // Load transaksi untuk user
+        function loadUserTransactions() {
+            const userTransactions = transactions.filter(t => t.userId === currentUser.username);
+            const tableBody = document.getElementById('userTransactionTable');
+            
+            tableBody.innerHTML = '';
+            
+            if (userTransactions.length === 0) {
+                tableBody.innerHTML = `
+                    <tr>
+                        <td colspan="6" class="text-center py-4">Belum ada transaksi</td>
+                    </tr>
+                `;
+                return;
+            }
+            
+            userTransactions.forEach(transaction => {
+                const statusClass = getStatusClass(transaction.status);
+                const formattedAmount = new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR' }).format(transaction.amount);
+                
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td>${transaction.id}</td>
+                    <td>${transaction.date}</td>
+                    <td>${transaction.method}</td>
+                    <td>${formattedAmount}</td>
+                    <td><span class="status-badge ${statusClass}">${transaction.status}</span></td>
+                    <td>
+                        <button class="btn btn-sm btn-outline-primary" onclick="viewTransactionDetail('${transaction.id}')">
+                            <i class="fas fa-eye"></i>
+                        </button>
+                    </td>
+                `;
+                tableBody.appendChild(row);
+            });
+        }
+        
+        // Load transaksi untuk admin
+        function loadTransactions() {
+            const tableBody = document.getElementById('adminTransactionTable');
+            
+            tableBody.innerHTML = '';
+            
+            if (transactions.length === 0) {
+                tableBody.innerHTML = `
+                    <tr>
+                        <td colspan="8" class="text-center py-4">Belum ada transaksi</td>
+                    </tr>
+                `;
+                return;
+            }
+            
+            // Urutkan berdasarkan tanggal terbaru
+            const sortedTransactions = [...transactions].sort((a, b) => {
+                return new Date(b.date) - new Date(a.date);
+            });
+            
+            sortedTransactions.forEach(transaction => {
+                const statusClass = getStatusClass(transaction.status);
+                const formattedAmount = new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR' }).format(transaction.amount);
+                
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td>${transaction.id}</td>
+                    <td>${transaction.userName}</td>
+                    <td>${transaction.date}</td>
+                    <td>${transaction.method}</td>
+                    <td>${formattedAmount}</td>
+                    <td><span class="status-badge ${statusClass}">${transaction.status}</span></td>
+                    <td>
+                        ${transaction.proof ? 
+                            `<button class="btn btn-sm btn-success" onclick="viewProof('${transaction.id}')">
+                                <i class="fas fa-image"></i> Lihat
+                            </button>` : 
+                            '<span class="text-muted">Tidak ada</span>'
+                        }
+                    </td>
+                    <td>
+                        <button class="btn btn-sm btn-primary me-1" onclick="verifyTransaction('${transaction.id}')">
+                            <i class="fas fa-check"></i>
+                        </button>
+                        <button class="btn btn-sm btn-info" onclick="viewTransactionDetail('${transaction.id}')">
+                            <i class="fas fa-eye"></i>
+                        </button>
+                    </td>
+                `;
+                tableBody.appendChild(row);
+            });
+        }
+        
+        // Update statistik dashboard admin
+        function updateDashboardStats() {
+            const total = transactions.length;
+            const success = transactions.filter(t => t.status === 'success').length;
+            const pending = transactions.filter(t => t.status === 'pending').length;
+            
+            document.getElementById('totalTransactions').textContent = total;
+            document.getElementById('successTransactions').textContent = success;
+            document.getElementById('pendingTransactions').textContent = pending;
+        }
+        
+        // Dapatkan class CSS untuk status
+        function getStatusClass(status) {
+            switch(status) {
+                case 'pending': return 'status-pending';
+                case 'success': return 'status-success';
+                case 'failed': return 'status-failed';
+                default: return '';
+            }
+        }
+        
+        // Verifikasi transaksi oleh admin
+        function verifyTransaction(transactionId) {
+            const transaction = transactions.find(t => t.id === transactionId);
+            
+            if (!transaction) {
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Transaksi tidak ditemukan',
+                    text: 'ID transaksi tidak valid'
+                });
+                return;
+            }
+            
+            Swal.fire({
+                title: 'Verifikasi Transaksi',
+                html: `
+                    <div class="text-start">
+                        <p>ID Transaksi: <strong>${transaction.id}</strong></p>
+                        <p>User: <strong>${transaction.userName}</strong></p>
+                        <p>Metode: <strong>${transaction.method}</strong></p>
+                        <p>Jumlah: <strong>${new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR' }).format(transaction.amount)}</strong></p>
+                        <p>Status saat ini: <span class="status-badge ${getStatusClass(transaction.status)}">${transaction.status}</span></p>
+                    </div>
+                `,
+                icon: 'question',
+                showCancelButton: true,
+                confirmButtonText: 'Setujui',
+                cancelButtonText: 'Tolak',
+                showDenyButton: true,
+                denyButtonText: 'Batalkan'
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    // Setujui transaksi
+                    updateTransactionStatus(transactionId, 'success');
+                } else if (result.isDenied) {
+                    // Batalkan transaksi
+                    updateTransactionStatus(transactionId, 'failed');
+                } else if (result.dismiss === Swal.DismissReason.cancel) {
+                    // Tolak transaksi
+                    updateTransactionStatus(transactionId, 'failed');
+                }
+            });
+        }
+        
+        // Update status transaksi
+        function updateTransactionStatus(transactionId, newStatus) {
+            const transactionIndex = transactions.findIndex(t => t.id === transactionId);
+            
+            if (transactionIndex !== -1) {
+                transactions[transactionIndex].status = newStatus;
+                localStorage.setItem('paymentTransactions', JSON.stringify(transactions));
+                
+                Swal.fire({
+                    icon: 'success',
+                    title: 'Berhasil!',
+                    text: `Status transaksi berhasil diubah menjadi ${newStatus}`
+                });
+                
+                // Refresh data
+                loadTransactions();
+                updateDashboardStats();
+            }
+        }
+        
+        // Lihat detail transaksi
+        function viewTransactionDetail(transactionId) {
+            const transaction = transactions.find(t => t.id === transactionId);
+            
+            if (!transaction) return;
+            
+            const formattedAmount = new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR' }).format(transaction.amount);
+            const statusClass = getStatusClass(transaction.status);
+            
+            const modalBody = document.getElementById('transactionModalBody');
+            modalBody.innerHTML = `
+                <div class="receipt">
+                    <h5 class="text-center mb-4">Detail Transaksi</h5>
+                    <table class="table table-borderless">
+                        <tr>
+                            <td><strong>ID Transaksi</strong></td>
+                            <td>${transaction.id}</td>
+                        </tr>
+                        <tr>
+                            <td><strong>User</strong></td>
+                            <td>${transaction.userName}</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Tanggal</strong></td>
+                            <td>${transaction.date}</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Metode Pembayaran</strong></td>
+                            <td>${transaction.method}</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Jumlah</strong></td>
+                            <td>${formattedAmount}</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Status</strong></td>
+                            <td><span class="status-badge ${statusClass}">${transaction.status}</span></td>
+                        </tr>
+                        <tr>
+                            <td><strong>Bukti Transfer</strong></td>
+                            <td>
+                                ${transaction.proof ? 
+                                    `<button class="btn btn-sm btn-success" onclick="viewProof('${transaction.id}')">
+                                        <i class="fas fa-image"></i> Lihat Bukti
+                                    </button>` : 
+                                    '<span class="text-muted">Tidak ada</span>'
+                                }
+                            </td>
+                        </tr>
+                    </table>
+                </div>
+            `;
+            
+            const modal = new bootstrap.Modal(document.getElementById('transactionModal'));
+            modal.show();
+        }
+        
+        // Lihat bukti transfer
+        function viewProof(transactionId) {
+            const transaction = transactions.find(t => t.id === transactionId);
+            
+            if (!transaction || !transaction.proof) {
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Bukti tidak tersedia',
+                    text: 'Tidak ada bukti transfer untuk transaksi ini'
+                });
+                return;
+            }
+            
+            Swal.fire({
+                title: 'Bukti Transfer',
+                html: `
+                    <div class="text-center">
+                        <p><strong>ID Transaksi:</strong> ${transaction.id}</p>
+                        <img src="https://via.placeholder.com/400x600/4cc9f0/ffffff?text=BUKTI+TRANSFER" class="img-fluid" alt="Bukti Transfer">
+                        <p class="mt-3"><small>File: ${transaction.proof}</small></p>
+                    </div>
+                `,
+                width: 600,
+                showCloseButton: true,
+                showConfirmButton: false
+            });
+        }
+        
+        // Event listener untuk preview gambar bukti
+        document.getElementById('proofImage').addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            const preview = document.getElementById('proofPreview');
+            
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    preview.innerHTML = `<img src="${e.target.result}" class="img-thumbnail" style="max-height: 200px;">`;
+                };
+                reader.readAsDataURL(file);
+            } else {
+                preview.innerHTML = '';
+            }
+        });
+        
+        // Inisialisasi saat halaman dimuat
+        document.addEventListener('DOMContentLoaded', function() {
+            // Cek jika ada user yang sudah login
+            const savedUser = localStorage.getItem('currentUser');
+            if (savedUser) {
+                currentUser = JSON.parse(savedUser);
+                if (currentUser.role === 'user') {
+                    showUserDashboard();
+                } else if (currentUser.role === 'admin') {
+                    showAdminDashboard();
+                }
+            }
+            
+            // Pilih metode pembayaran pertama secara default
+            selectPaymentMethod('dana');
+        });
+    </script>
+</body>
+</html>
